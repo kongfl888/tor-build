@@ -1,0 +1,99 @@
+# A workflow to build and upload every 2 weeks
+name: Build
+
+on:
+  schedule:
+    - cron: '0 0 * * 0/14'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux
+    steps:
+      - name: Install Dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel boost catch2 cmake ffmpeg fmt git glslang libzip mbedtls ninja nlohmann-json opus qt5 sdl2 zip unzip ccache wget
+      
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Install Android SDK
+        run: |
+          export ANDROID_SDK_ROOT=$GITHUB_WORKSPACE/Android/Sdk
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O commandlinetools.zip
+          mkdir -p $GITHUB_WORKSPACE/Android/Sdk/cmdline-tools
+          unzip commandlinetools.zip -d $GITHUB_WORKSPACE/Android/Sdk/cmdline-tools
+          mv $GITHUB_WORKSPACE/Android/Sdk/cmdline-tools/cmdline-tools $GITHUB_WORKSPACE/Android/Sdk/cmdline-tools/latest
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33"
+
+      - name: Git Checkout
+        run: |
+          git clone --depth 1 --recursive https://codeberg.org/litucks/torzu.git
+          wget https://raw.githubusercontent.com/kongfl888/tor-build/main/patch/0001-Android-minsdk-set-to-29.patch
+          cd torzu
+          git am ../*.patch || git am --skip
+          cd ..
+
+      - name: Restore CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: 3Gi
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle') }}-${{ hashFiles('app/**/*.xml') }}-${{ hashFiles('app/**.kt', 'app/**.java') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle') }}-${{ hashFiles('app/**/*.xml') }}-
+            ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle') }}-
+            ${{ runner.os }}-gradle-
+
+      - name: Android Assemble
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: "ccache"
+          CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
+        run: |
+          export ANDROID_SDK_ROOT=$GITHUB_WORKSPACE/Android/Sdk
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+          cd torzu/src/android
+          ./gradlew --no-daemon --stacktrace --build-cache --parallel --configure-on-demand assembleMainlineRelease
+
+      - name: Rename APKs
+        run: |
+          mv torzu/src/android/app/build/outputs/apk/mainline/release/app-mainline-release.apk torzu-release.apk
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: torzu-release.apk
+          path: torzu-release.apk
+
+      - name: Linux Assemble
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: "ccache"
+          CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
+        run: |
+          cd torzu
+          mkdir build && cd build
+          cmake .. -GNinja -DYUZU_USE_BUNDLED_VCPKG=ON -DYUZU_TESTS=OFF
+          ninja
+      
+      - name: Rename Binaries
+        run: |
+          mv torzu/build/bin/yuzu torzu-release-linux
+      
+      - name: Upload Release Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: torzu-release-linux
+          path: torzu-release-linux

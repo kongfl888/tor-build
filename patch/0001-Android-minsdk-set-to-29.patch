@@ -1,0 +1,22 @@
+From a5aaed782e77b0f91763f9b917737eb18554fcb1 Mon Sep 17 00:00:00 2001
+From: kongfl888 <kongfl888@outlook.com>
+Date: Fri, 26 Jul 2024 21:43:48 +0800
+Subject: [PATCH] Android: minsdk set to 29.
+
+Signed-off-by: kongfl888 <kongfl888@outlook.com>
+---
+ src/android/app/build.gradle.kts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/android/app/build.gradle.kts b/src/android/app/build.gradle.kts
+index a7140ca..21e980b 100644
+--- a/src/android/app/build.gradle.kts
++++ b/src/android/app/build.gradle.kts
+@@ -58,4 +58,4 @@ android {
+-        minSdk = 30
++        minSdk = 29
+         targetSdk = 34
+         versionName = getGitVersion()
+ 
+-- 
+
