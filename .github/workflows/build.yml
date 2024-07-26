@@ -39,6 +39,8 @@ jobs:
           git clone --depth 1 --recursive https://codeberg.org/litucks/torzu.git
           wget https://raw.githubusercontent.com/kongfl888/tor-build/main/patch/0001-Android-minsdk-set-to-29.patch
           cd torzu
+          git config --global user.email "bot@github.com"
+          git config --global user.name "bot"
           git am ../*.patch || git am --skip
           cd ..
 
