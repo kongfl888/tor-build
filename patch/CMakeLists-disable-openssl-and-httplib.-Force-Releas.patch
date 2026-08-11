@@ -1,0 +1,56 @@
+From f1bed06177075f9fcd3d9d2ae409ba1e0f6f7485 Mon Sep 17 00:00:00 2001
+From: kongfl888 <6991229+kongfl888@users.noreply.github.com>
+Date: Tue, 11 Aug 2026 18:52:11 +0800
+Subject: [PATCH] CMakeLists: disable openssl and httplib. Force Release for
+ build.
+
+---
+ CMakeLists.txt           | 5 ++++-
+ externals/CMakeLists.txt | 8 ++++----
+ 2 files changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6c7e815..24f698d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -268,6 +268,8 @@ if (NOT IS_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
+     message(STATUS "Defaulting to a Release build")
+ endif()
+ 
++set(CMAKE_BUILD_TYPE "Release")
++
+ if(EXISTS ${PROJECT_SOURCE_DIR}/hooks/pre-commit AND NOT EXISTS ${PROJECT_SOURCE_DIR}/.git/hooks/pre-commit)
+     if (EXISTS ${PROJECT_SOURCE_DIR}/.git/)
+         message(STATUS "Copying pre-commit hook")
+@@ -599,7 +601,8 @@ if (MINGW)
+ endif()
+ 
+ if(ENABLE_OPENSSL)
+-    find_package(OpenSSL 1.1.1 REQUIRED)
++    set(ENABLE_OPENSSL OFF)
++    # find_package(OpenSSL 1.1.1 REQUIRED)
+ endif()
+ 
+ if (UNIX AND NOT APPLE)
+diff --git a/externals/CMakeLists.txt b/externals/CMakeLists.txt
+index 78133a3..f0a83ca 100644
+--- a/externals/CMakeLists.txt
++++ b/externals/CMakeLists.txt
+@@ -158,10 +158,10 @@ endif()
+ add_subdirectory(sirit)
+ 
+ # httplib
+-if (NOT TARGET httplib::httplib)
+-    set(HTTPLIB_REQUIRE_OPENSSL ON)
+-    add_subdirectory(cpp-httplib)
+-endif()
++# if (NOT TARGET httplib::httplib)
++    #set(HTTPLIB_REQUIRE_OPENSSL ON)
++    # add_subdirectory(cpp-httplib)
++# endif()
+ 
+ # cpp-jwt
+ if (ENABLE_WEB_SERVICE AND NOT TARGET cpp-jwt::cpp-jwt)
+-- 
+2.52.0.windows.1
+
